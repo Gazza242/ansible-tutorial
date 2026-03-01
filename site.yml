@@ -1,0 +1,34 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+    - name: install updates
+      ansible.builtin.dnf:
+        update_only: yes
+        update_cache: yes
+      when: ansible_distribution == "CentOS"
+
+- hosts: web_servers
+  become: true
+  tasks:
+
+    - name: install apache on web servers
+      ansible.builtin.dnf:
+        name:
+          - httpd
+          - php-fpm
+          - php-cli
+          - php-mysqlnd
+        state: present
+
+- hosts: db_servers
+  become: true
+  tasks:
+
+    - name: install mariadb package on db servers
+      ansible.builtin.dnf:
+        name: mariadb
+        state: latest
+      when: ansible_distribution == "CentOS"
+
