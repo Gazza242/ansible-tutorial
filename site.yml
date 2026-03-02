@@ -1,18 +1,16 @@
----
 - hosts: all
   become: true
   tasks:
-
     - name: install updates
       ansible.builtin.dnf:
-        update_only: yes
+        name: "*"
+        state: latest
         update_cache: yes
       when: ansible_distribution == "CentOS"
 
 - hosts: web_servers
   become: true
   tasks:
-
     - name: install apache on web servers
       ansible.builtin.dnf:
         name:
@@ -21,14 +19,54 @@
           - php-cli
           - php-mysqlnd
         state: present
+      when: ansible_distribution == "CentOS"
+
+    - name: ensure httpd is running
+      tags: httpd, CentOS
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: change email address for admin
+      tags: httpd, CentOS
+      ansible.builtin.lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^ServerAdmin'
+        line: ServerAdmin somebody@somewhere.net
+      when: ansible_distribution == "CentOS"
+      register: httpd
+
+    - name: restart httpd (CentOS)
+      tags: httpd, CentOS
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+      when: httpd.changed
+
+    - name: copy html file for site
+      tags: httpd, CentOS
+      ansible.builtin.copy:
+        src: default_site.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: '0644'
 
 - hosts: db_servers
   become: true
   tasks:
-
-    - name: install mariadb package on db servers
+    - name: install mariadb server
       ansible.builtin.dnf:
-        name: mariadb
-        state: latest
+        name: mariadb-server
+        state: present
       when: ansible_distribution == "CentOS"
+
+    - name: ensure mariadb is running
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+
 
